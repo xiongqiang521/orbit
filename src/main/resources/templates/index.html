@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv = "Content-Type" content = "text/html; charset=utf-8"/>
+    <meta name = "viewport" content = "initial-scale=1.0, user-scalable=no"/>
+    <style type = "text/css">
+        body, html {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            font-family: "微软雅黑";
+        }
+
+        #allmap {
+            height: 500px;
+            width: 100%;
+        }
+
+        #control {
+            width: 100%;
+        }
+    </style>
+    <script type="text/javascript" src="jquery.min.js"></script>
+    <script type = "text/javascript" src = "//api.map.baidu.com/api?v=2.0&ak=kNVRaXn72gV5WCM735g3uwz5anrQAfGY"></script>
+    <title>设置线、面可编辑</title>
+    <script>
+        //根据经纬极值计算绽放级别。
+        function getZoom (pointA, pointB) {
+            //级别18到3。
+            var zoom = ["50","100","200","500","1000","2000","5000","10000","20000","25000","50000","100000","200000","500000","1000000","2000000"];
+            var distance = map.getDistance(pointA,pointB).toFixed(1);  //获取两点距离,保留小数点后两位
+            for (var i = 0,zoomLen = zoom.length; i < zoomLen; i++) {
+                if(zoom[i] - distance > 0){
+                    return 18-i+3;//之所以会多3，是因为地图范围常常是比例尺距离的10倍以上。所以级别会增加3。
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+<div id = "allmap"></div>
+<div id = "control">
+    <button onclick = "polyline.enableEditing();polygon.enableEditing();">开启线、面编辑功能</button>
+    <button onclick = "polyline.disableEditing();polygon.disableEditing();">关闭线、面编辑功能</button>
+</div>
+</body>
+</html>
+<script type = "text/javascript">
+    var pointList = [];
+
+    $.ajax({
+        url: '/map/getData',
+        type:"POST",
+        dataType : 'json',
+        async: false,
+        success : function(datas) {
+            for (let index in datas) {
+                pointList.push(new BMap.Point(datas[index].lon , datas[index].lat ));
+            }
+        },
+        error:function (data) {
+            console.error(data);
+        }
+    });
+
+
+    var pointStart= pointList[0];
+    var pointEnd= pointList[pointList.length-1];
+
+
+    // 百度地图API功能
+    var map = new BMap.Map("allmap");
+
+    map.centerAndZoom(
+        // 设置中心点
+        new BMap.Point((pointStart.lng + pointEnd.lng) /2,(pointStart.lat + pointEnd.lat) /2 ),
+        // 根据起始位置设置地图放大级别
+        getZoom(pointStart,pointEnd)
+    );
+
+    map.enableScrollWheelZoom();
+
+    var polyline = new BMap.Polyline(pointList,
+        {strokeColor: "red", strokeWeight: 3, strokeOpacity: 0.5 ,strokeStyle:"dashed"}
+    );   //创建折线
+    map.addOverlay(polyline);   //增加折线
+
+    //创建点
+    var startIcon = new BMap.Icon("/img/starting.png", new BMap.Size(32,60));
+    var startMarker = new BMap.Marker(pointStart,{icon:startIcon});  // 创建标注
+    // var startMarker = new BMap.Marker(pointStart);  // 创建标注
+    map.addOverlay(startMarker);              // 将标注添加到地图中
+    //创建点
+
+    var endIcon = new BMap.Icon("/img/destination.png", new BMap.Size(32,60));
+    var endMarker = new BMap.Marker(pointEnd,{icon:endIcon});  // 创建标注
+    // var endMarker = new BMap.Marker(pointEnd);  // 创建标注
+    map.addOverlay(endMarker);              // 将标注添加到地图中
+
+</script>
+
